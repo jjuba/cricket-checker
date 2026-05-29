@@ -24,10 +24,10 @@ from datetime import datetime
 #   ⚙️  কনফিগারেশন (Railway Variables থেকে আসবে)
 # =============================================
 RAPIDAPI_KEY     = os.environ.get("RAPIDAPI_KEY")
-RAPIDAPI_HOST    = "cricbuzz-cricket.p.rapidapi.com"
+RAPIDAPI_HOST    = "crickbuzz-official-apis.p.rapidapi.com"
 TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-POLL_INTERVAL    = 3600  # 15 মিনিট
+POLL_INTERVAL    = 300  # 15 মিনিট
 
 HEADERS = {
     "X-RapidAPI-Key": RAPIDAPI_KEY,
