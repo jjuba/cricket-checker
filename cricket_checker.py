@@ -306,110 +306,109 @@ def print_dashboard(match_name, score, results, team2_name):
     print("=" * 65)
 
 
-# =============================================
-#   🎮  ম্যাচ সিলেকশন
-# =============================================
 
-def select_match(live_data):
-    t20_matches = []
-    try:
-        for type_match in live_data.get("typeMatches", []):
-            for series in type_match.get("seriesMatches", []):
-                wrapper = series.get("seriesAdWrapper", {})
-                for match in wrapper.get("matches", []):
-                    mi = match.get("matchInfo", {})
-                    if mi.get("matchFormat", "").upper() == "T20":
-                        t20_matches.append({
-                            "id":        mi.get("matchId"),
-                            "series_id": mi.get("seriesId"),
-                            "name":      f"{mi.get('team1',{}).get('teamName','?')} vs {mi.get('team2',{}).get('teamName','?')}",
-                            "series":    mi.get("seriesName", ""),
-                            "state":     mi.get("state", "")
-                        })
-    except Exception as e:
-        print(f"  [ERROR] {e}")
 
-    if not t20_matches:
-        print("\n  ⚠️  কোনো লাইভ T20 ম্যাচ নেই।")
-        return None, None
-
-    print("\n  📺  লাইভ T20 ম্যাচ:\n")
-    for i, m in enumerate(t20_matches, 1):
-        print(f"  [{i}] {m['name']}")
-        print(f"       {m['series']} | {m['state']}\n")
-
-    while True:
-        try:
-            ch = int(input("  ম্যাচ নম্বর বেছে নিন: ")) - 1
-            if 0 <= ch < len(t20_matches):
-                return t20_matches[ch]["id"], t20_matches[ch]["series_id"]
-        except (ValueError, KeyboardInterrupt):
-            pass
-        print("  সঠিক নম্বর দিন!")
+    
 
 
 # =============================================
 #   🚀  মেইন লুপ
 # =============================================
 
-def run(match_id, series_id):
-    global notified_conditions
-    print(f"\n  ✅ মনিটরিং শুরু | Match ID: {match_id}")
-    print(f"  🔔 যেকোনো শর্ত পূরণ হলেই Telegram এ মেসেজ যাবে\n")
-
+def run():
+    print("সব লাইভ T20 ম্যাচ অটো চেক শুরু...")
     while True:
         try:
-            scorecard      = get_scorecard(match_id)
-            match_info     = get_match_info(match_id)
-            standings_data = get_standings(series_id) if series_id else None
-            commentary     = get_commentary(match_id)
-
-            if not scorecard or not match_info:
-                print("  [WARNING] ডেটা নেই, আবার চেষ্টা হচ্ছে...")
+            live_data = get_live_matches()
+            if not live_data:
                 time.sleep(POLL_INTERVAL)
                 continue
 
-            innings_list = parse_innings(scorecard)
-            inn2 = get_inn(innings_list, 2)
-            team2_name = inn2["team_name"] if inn2 else "২য় টিম"
+            # সব T20 ম্যাচ বের করো
+            t20_matches = []
+            for type_match in live_data.get("typeMatches", []):
+                for series in type_match.get("seriesMatches", []):
+                    wrapper = series.get("seriesAdWrapper", {})
+                    for match in wrapper.get("matches", []):
+                        mi = match.get("matchInfo", {})
+                        if mi.get("matchFormat", "").upper() == "T20":
+                            t20_matches.append({
+                                "id":        mi.get("matchId"),
+                                "series_id": mi.get("seriesId"),
+                                "name":      f"{mi.get('team1',{}).get('teamName','?')} vs {mi.get('team2',{}).get('teamName','?')}",
+                            })
 
-            # স্কোর বানাই
-            score_parts = [f"{i['team_name']}: {i['runs']}/{i['wickets']} ({i['overs']} ov)" for i in innings_list]
-            score = "  |  ".join(score_parts) or "ডেটা নেই"
-            match_name = match_info.get("matchInfo", {}).get("matchDescription", "T20 ম্যাচ")
+            if not t20_matches:
+                print("কোনো লাইভ T20 ম্যাচ নেই, আবার চেক হবে...")
+                time.sleep(POLL_INTERVAL)
+                continue
 
-            # ৯টি শর্ত চেক
-            r5, r6 = cond5_6(innings_list, standings_data)
-            results = [
-                cond1(innings_list),
-                cond2(innings_list),
-                cond3(innings_list),
-                cond4(commentary),
-                r5,
-                r6,
-                cond7(innings_list, match_info),
-                cond8(innings_list),
-                cond9(match_info),
-            ]
+            # প্রতিটা ম্যাচ চেক করো
+            for match in t20_matches:
+                match_id  = match["id"]
+                series_id = match["series_id"]
+                match_name = match["name"]
 
-            # ড্যাশবোর্ড প্রিন্ট
-            print_dashboard(match_name, score, results, team2_name)
+                scorecard      = get_scorecard(match_id)
+                match_info     = get_match_info(match_id)
+                standings_data = get_standings(series_id) if series_id else None
+                commentary     = get_commentary(match_id)
 
-            # Telegram অ্যালার্ট — যেকোনো ১টা সত্যি হলেই
-            for i, (name, (val, detail)) in enumerate(zip(CONDITION_NAMES, results)):
-                if val is True and i not in notified_conditions:
-                    notified_conditions.add(i)
-                    msg = build_alert_message(name, detail, match_name, score, team2_name)
-                    send_telegram(msg)
+                if not scorecard or not match_info:
+                    continue
+
+                innings_list = parse_innings(scorecard)
+                inn2 = get_inn(innings_list, 2)
+                team2_name = inn2["team_name"] if inn2 else "২য় টিম"
+
+                score_parts = [f"{i['team_name']}: {i['runs']}/{i['wickets']} ({i['overs']} ov)" for i in innings_list]
+                score = "  |  ".join(score_parts) or "ডেটা নেই"
+
+                r5, r6 = cond5_6(innings_list, standings_data)
+                results = [
+                    cond1(innings_list),
+                    cond2(innings_list),
+                    cond3(innings_list),
+                    cond4(commentary),
+                    r5,
+                    r6,
+                    cond7(innings_list, match_info),
+                    cond8(innings_list),
+                    cond9(match_info),
+                ]
+
+                print(f"\n [{match_name}] চেক হচ্ছে...")
+                for i, (name, (val, detail)) in enumerate(zip(CONDITION_NAMES, results)):
+                    print(f"  {i+1}. {name}: {status_icon(val)} | {detail}")
+
+                    # শর্ত পূরণ হলে Telegram মেসেজ
+                    notif_key = f"{match_id}_{i}"
+                    if val is True and notif_key not in notified_conditions:
+                        notified_conditions.add(notif_key)
+                        msg = (
+                            f"🏏 <b>T20 CRICKET ALERT</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📍 <b>ম্যাচ:</b> {match_name}\n"
+                            f"📊 <b>স্কোর:</b> {score}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━\n"
+                            f"✅ <b>পূরণ হওয়া শর্ত:</b>\n"
+                            f"   🔸 {name}\n"
+                            f"   └─ {detail}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🎯 <b>{team2_name} জিততে পারে!</b>\n"
+                            f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                        )
+                        send_telegram(msg)
 
             time.sleep(POLL_INTERVAL)
 
         except KeyboardInterrupt:
-            print("\n\n  👋 প্রোগ্রাম বন্ধ।")
+            print("\n প্রোগ্রাম বন্ধ।")
             break
         except Exception as e:
-            print(f"\n  [ERROR] {e}")
+            print(f"[ERROR] {e}")
             time.sleep(POLL_INTERVAL)
+
 
 
 def main():
@@ -436,9 +435,8 @@ def main():
         print("  ❌ ডেটা আনা যায়নি। API Key ও ইন্টারনেট চেক করুন।")
         return
 
-    match_id, series_id = select_match(live_data)
-    if match_id:
-        run(match_id, series_id)
+    
+        run()
 
 
 if __name__ == "__main__":
