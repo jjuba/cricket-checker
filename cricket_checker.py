@@ -27,7 +27,7 @@ RAPIDAPI_KEY     = os.environ.get("RAPIDAPI_KEY")
 RAPIDAPI_HOST    = "cricbuzz-cricket.p.rapidapi.com"
 TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-POLL_INTERVAL    = 600  # 45 মিনিট
+POLL_INTERVAL    = 3600  # 45 মিনিট
 
 HEADERS = {
     "X-RapidAPI-Key": RAPIDAPI_KEY,
