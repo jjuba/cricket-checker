@@ -434,10 +434,7 @@ def main():
     if not live_data:
         print("  ❌ ডেটা আনা যায়নি। API Key ও ইন্টারনেট চেক করুন।")
         return
-
-    
-        run()
-
+      run()
 
 if __name__ == "__main__":
     main()
