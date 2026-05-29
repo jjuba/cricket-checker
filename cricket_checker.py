@@ -35,7 +35,7 @@ RAPIDAPI_KEY     = os.environ.get("RAPIDAPI_KEY")
 TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-POLL_INTERVAL  = 600  # প্রতি ৬০ সেকেন্ডে আপডেট
+POLL_INTERVAL  = 60 # প্রতি ৬০ সেকেন্ডে আপডেট
 
 HEADERS = {
     "X-RapidAPI-Key": RAPIDAPI_KEY,
@@ -434,7 +434,7 @@ def main():
     if not live_data:
         print("  ❌ ডেটা আনা যায়নি। API Key ও ইন্টারনেট চেক করুন।")
         return
-      run()
+    run()
 
 if __name__ == "__main__":
     main()
